@@ -1,5 +1,13 @@
 package com.fatih.taskflow.controller;
 
+
+import com.fatih.taskflow.dto.PageResponse;
+import com.fatih.taskflow.model.TaskStatus;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Sort;
+import org.springframework.data.web.PageableDefault;
+import org.springframework.web.bind.annotation.RequestParam;
 import com.fatih.taskflow.dto.CreateTaskRequest;
 import com.fatih.taskflow.dto.TaskResponse;
 import com.fatih.taskflow.dto.UpdateTaskStatusRequest;
@@ -32,8 +40,15 @@ public class TaskController {
     }
 
     @GetMapping
-    public List<TaskResponse> getTasks() {
-        return TaskMapper.toResponseList(taskService.getTasks());
+    public PageResponse<TaskResponse> getTasks(
+            @RequestParam(required = false) TaskStatus status,
+            @RequestParam(required = false) Long projectId,
+            @PageableDefault(size = 20, sort = "createdAt", direction = Sort.Direction.DESC)
+            Pageable pageable) {
+
+        Page<Task> page = taskService.getTasks(status, projectId, pageable);
+
+        return PageResponse.from(page, TaskMapper::toResponse);
     }
 
     @GetMapping("/project/{projectId}")

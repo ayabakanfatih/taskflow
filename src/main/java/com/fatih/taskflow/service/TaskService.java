@@ -7,6 +7,8 @@ import com.fatih.taskflow.model.Task;
 import com.fatih.taskflow.model.TaskPriority;
 import com.fatih.taskflow.model.TaskStatus;
 import com.fatih.taskflow.repository.TaskRepository;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import com.fatih.taskflow.exception.ProjectNotFoundException;
@@ -106,4 +108,24 @@ public List<Task> getTasksByProjectId(Long projectId) {
 
     return taskRepository.findByProject_Id(projectId);
 }
+@Transactional(readOnly = true)
+    public Page<Task> getTasks(TaskStatus status, Long projectId, Pageable pageable) {
+
+        if (status != null && projectId != null) {
+            return taskRepository.findByStatusAndProject_Id(status, projectId, pageable);
+        }
+
+        if (status != null) {
+            return taskRepository.findByStatus(status, pageable);
+        }
+
+        if (projectId != null) {
+            if (!projectRepository.existsById(projectId)) {
+                throw new ProjectNotFoundException(projectId);
+            }
+            return taskRepository.findByProject_Id(projectId, pageable);
+        }
+
+        return taskRepository.findAll(pageable);
+    }
 }
