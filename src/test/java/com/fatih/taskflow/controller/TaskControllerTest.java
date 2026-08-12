@@ -15,6 +15,7 @@ import org.springframework.http.HttpHeaders;
 
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.header;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.patch;
 import static org.mockito.Mockito.when;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
@@ -83,7 +84,7 @@ void createTask_shouldReturn400WhenTitleIsBlank() throws Exception {
             .andExpect(jsonPath("$.status").value(400))
             .andExpect(jsonPath("$.error").value("Bad Request"))
             .andExpect(
-                    jsonPath("$.messages[0]")
+                    jsonPath("$.details[0]")
                             .value("title: Task başlığı boş olamaz")
             );
 }
@@ -128,4 +129,15 @@ void deleteTask_shouldReturn204WhenTaskIsDeleted() throws Exception {
 
     verify(taskService).deleteTask(1L);
 }
+@Test
+    void updateTaskStatus_shouldReturn400WhenStatusIsNull() throws Exception {
+        mockMvc.perform(patch("/api/tasks/1/status")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"status\":null}"))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.status").value(400))
+                .andExpect(jsonPath("$.error").value("Bad Request"))
+                .andExpect(jsonPath("$.path").value("/api/tasks/1/status"))
+                .andExpect(jsonPath("$.details[0]").value("status: Status alanı zorunludur"));
+    } 
 }
