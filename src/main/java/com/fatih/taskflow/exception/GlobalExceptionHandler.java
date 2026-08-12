@@ -41,6 +41,22 @@ public class GlobalExceptionHandler {
         return build(HttpStatus.NOT_FOUND, ex.getMessage(), request, null);
     }
 
+    @ExceptionHandler(UserNotFoundException.class)
+    public ResponseEntity<ApiError> handleUserNotFound(
+            UserNotFoundException ex, HttpServletRequest request) {
+
+        return build(HttpStatus.NOT_FOUND, ex.getMessage(), request, null);
+    }
+
+    // ---------- 409: Cakisma ----------
+
+    @ExceptionHandler(EmailAlreadyInUseException.class)
+    public ResponseEntity<ApiError> handleEmailInUse(
+            EmailAlreadyInUseException ex, HttpServletRequest request) {
+
+        return build(HttpStatus.CONFLICT, ex.getMessage(), request, null);
+    }
+
     // ---------- 400: Validation hatasi ----------
 
     @ExceptionHandler(MethodArgumentNotValidException.class)
