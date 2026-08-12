@@ -1,6 +1,9 @@
 package com.fatih.taskflow.controller;
 
 import com.fatih.taskflow.dto.CreateProjectRequest;
+import com.fatih.taskflow.dto.ProjectResponse;
+import com.fatih.taskflow.dto.TaskResponse;
+import com.fatih.taskflow.mapper.TaskMapper;
 import com.fatih.taskflow.model.Project;
 import com.fatih.taskflow.model.Task;
 import com.fatih.taskflow.service.ProjectService;
@@ -29,23 +32,20 @@ public class ProjectController {
     }
 
     @GetMapping
-    public List<Project> getProjects() {
-        return projectService.getProjects();
+    public List<ProjectResponse> getProjects() {
+        return projectService.getProjectResponses();
     }
 
     @GetMapping("/{id}")
-    public Project getProjectById(
-            @PathVariable Long id) {
-
-        return projectService.getProjectById(id);
+    public ProjectResponse getProjectById(@PathVariable Long id) {
+        return projectService.getProjectResponseById(id);
     }
 
-    @PostMapping
-    public ResponseEntity<Project> createProject(
+@PostMapping
+    public ResponseEntity<ProjectResponse> createProject(
             @Valid @RequestBody CreateProjectRequest request) {
 
-        Project createdProject =
-                projectService.createProject(request);
+        Project createdProject = projectService.createProject(request);
 
         URI location = ServletUriComponentsBuilder
                 .fromCurrentRequest()
@@ -55,13 +55,14 @@ public class ProjectController {
 
         return ResponseEntity
                 .created(location)
-                .body(createdProject);
+                .body(new ProjectResponse(
+                        createdProject.getId(),
+                        createdProject.getName(),
+                        0L));
     }
 
     @GetMapping("/{projectId}/tasks")
-    public List<Task> getProjectTasks(
-            @PathVariable Long projectId) {
-
-        return taskService.getTasksByProjectId(projectId);
+    public List<TaskResponse> getProjectTasks(@PathVariable Long projectId) {
+        return TaskMapper.toResponseList(taskService.getTasksByProjectId(projectId));
     }
 }

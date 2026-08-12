@@ -6,6 +6,9 @@ import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
 import jakarta.persistence.Table;
 
+import jakarta.persistence.OneToMany;
+import java.util.ArrayList;
+import java.util.List;
 @Entity
 @Table(name = "projects")
 public class Project {
@@ -15,6 +18,10 @@ public class Project {
     private Long id;
 
     private String name;
+
+    @OneToMany(mappedBy = "project")
+    private List<Task> tasks = new ArrayList<>();
+
 
     protected Project() {
     }
@@ -29,5 +36,9 @@ public class Project {
 
     public String getName() {
         return name;
+    }
+
+    public List<Task> getTasks() {
+        return tasks;
     }
 }
