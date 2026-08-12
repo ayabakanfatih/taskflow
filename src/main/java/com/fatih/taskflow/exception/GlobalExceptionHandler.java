@@ -57,6 +57,13 @@ public class GlobalExceptionHandler {
         return build(HttpStatus.CONFLICT, ex.getMessage(), request, null);
     }
 
+    @ExceptionHandler(InvalidCredentialsException.class)
+    public ResponseEntity<ApiError> handleInvalidCredentials(
+            InvalidCredentialsException ex, HttpServletRequest request) {
+
+        return build(HttpStatus.UNAUTHORIZED, ex.getMessage(), request, null);
+    }
+
     // ---------- 400: Validation hatasi ----------
 
     @ExceptionHandler(MethodArgumentNotValidException.class)

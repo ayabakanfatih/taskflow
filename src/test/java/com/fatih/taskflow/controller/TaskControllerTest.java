@@ -3,6 +3,9 @@ package com.fatih.taskflow.controller;
 import com.fatih.taskflow.model.Task;
 import com.fatih.taskflow.model.TaskStatus;
 import com.fatih.taskflow.service.TaskService;
+import com.fatih.taskflow.service.JwtService;
+import org.springframework.boot.security.autoconfigure.SecurityAutoConfiguration;
+import org.springframework.boot.security.autoconfigure.web.servlet.ServletWebSecurityAutoConfiguration;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.webmvc.test.autoconfigure.WebMvcTest;
@@ -24,8 +27,11 @@ import static org.mockito.Mockito.verify;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete;
 
 
-@WebMvcTest(TaskController.class)
+@WebMvcTest(value = TaskController.class, excludeAutoConfiguration = {SecurityAutoConfiguration.class, ServletWebSecurityAutoConfiguration.class})
 class TaskControllerTest {
+
+    @MockitoBean
+    private JwtService jwtService;
 
     @Autowired
     private MockMvc mockMvc;

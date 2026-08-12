@@ -6,6 +6,9 @@ import com.fatih.taskflow.model.Task;
 import com.fatih.taskflow.model.TaskStatus;
 import com.fatih.taskflow.service.ProjectService;
 import com.fatih.taskflow.service.TaskService;
+import com.fatih.taskflow.service.JwtService;
+import org.springframework.boot.security.autoconfigure.SecurityAutoConfiguration;
+import org.springframework.boot.security.autoconfigure.web.servlet.ServletWebSecurityAutoConfiguration;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.webmvc.test.autoconfigure.WebMvcTest;
@@ -19,8 +22,11 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
-@WebMvcTest(ProjectController.class)
+@WebMvcTest(value = ProjectController.class, excludeAutoConfiguration = {SecurityAutoConfiguration.class, ServletWebSecurityAutoConfiguration.class})
 class ProjectControllerTest {
+
+    @MockitoBean
+    private JwtService jwtService;
 
     @Autowired
     private MockMvc mockMvc;
