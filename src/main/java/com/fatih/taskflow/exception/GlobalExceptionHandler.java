@@ -5,6 +5,8 @@ import com.fatih.taskflow.dto.ApiError;
 import jakarta.servlet.http.HttpServletRequest;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.dao.InvalidDataAccessApiUsageException;
+import org.springframework.data.core.PropertyReferenceException;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.http.converter.HttpMessageNotReadableException;
@@ -115,6 +117,38 @@ public class GlobalExceptionHandler {
             MethodArgumentTypeMismatchException ex, HttpServletRequest request) {
 
         String message = "'" + ex.getName() + "' parametresi geçersiz: " + ex.getValue();
+
+        return build(HttpStatus.BAD_REQUEST, message, request, null);
+    }
+
+    // ---------- 400: Gecersiz siralama alani ----------
+
+    @ExceptionHandler(InvalidSortFieldException.class)
+    public ResponseEntity<ApiError> handleInvalidSortField(
+            InvalidSortFieldException ex, HttpServletRequest request) {
+
+        return build(HttpStatus.BAD_REQUEST, ex.getMessage(), request, null);
+    }
+
+    @ExceptionHandler(InvalidDataAccessApiUsageException.class)
+    public ResponseEntity<ApiError> handleInvalidDataAccess(
+            InvalidDataAccessApiUsageException ex, HttpServletRequest request) {
+
+        Throwable cause = ex.getCause();
+        if (cause instanceof PropertyReferenceException pre) {
+            return handleInvalidSortProperty(pre, request);
+        }
+
+        return build(HttpStatus.BAD_REQUEST,
+                "Geçersiz sorgu parametresi gönderildi", request, null);
+    }
+
+    @ExceptionHandler(PropertyReferenceException.class)
+    public ResponseEntity<ApiError> handleInvalidSortProperty(
+            PropertyReferenceException ex, HttpServletRequest request) {
+
+        String message = "Geçersiz sıralama alanı: '" + ex.getPropertyName()
+                + "'. Örnek kullanım: sort=createdAt,desc";
 
         return build(HttpStatus.BAD_REQUEST, message, request, null);
     }
