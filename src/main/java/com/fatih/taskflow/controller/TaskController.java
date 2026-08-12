@@ -34,7 +34,10 @@ public class TaskController {
     public List<Task> getTasks() {
         return taskService.getTasks();
     }
-
+@GetMapping("/project/{projectId}")
+    public List<Task> getTasksByProjectId(@PathVariable Long projectId) {
+        return taskService.getTasksByProjectId(projectId);
+    }
     @GetMapping("/{id}")
     public Task getTaskById(@PathVariable Long id) {
        return taskService.getTaskById(id);
