@@ -9,6 +9,7 @@ import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
 import java.util.List;
+import java.util.Optional;
 
 public interface TaskRepository
         extends JpaRepository<Task, Long> {
@@ -22,4 +23,19 @@ long countByProject_Id(Long projectId);
 
     Page<Task> findByStatusAndProject_Id(TaskStatus status, Long projectId, Pageable pageable);
     List<Task> findByProject_Id(Long projectId);
+
+    Page<Task> findByOwner_Id(Long ownerId, Pageable pageable);
+
+    Page<Task> findByOwner_IdAndStatus(Long ownerId, TaskStatus status, Pageable pageable);
+
+    Page<Task> findByOwner_IdAndProject_Id(Long ownerId, Long projectId, Pageable pageable);
+
+    Page<Task> findByOwner_IdAndStatusAndProject_Id(
+            Long ownerId, TaskStatus status, Long projectId, Pageable pageable);
+
+    Optional<Task> findByIdAndOwner_Id(Long id, Long ownerId);
+
+    List<Task> findByProject_IdAndOwner_Id(Long projectId, Long ownerId);
+
+    long countByProject_IdAndOwner_Id(Long projectId, Long ownerId);
 }

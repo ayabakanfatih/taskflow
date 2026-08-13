@@ -66,6 +66,13 @@ public class GlobalExceptionHandler {
         return build(HttpStatus.UNAUTHORIZED, ex.getMessage(), request, null);
     }
 
+    @ExceptionHandler(UnauthenticatedException.class)
+    public ResponseEntity<ApiError> handleUnauthenticated(
+            UnauthenticatedException ex, HttpServletRequest request) {
+
+        return build(HttpStatus.UNAUTHORIZED, ex.getMessage(), request, null);
+    }
+
     // ---------- 400: Validation hatasi ----------
 
     @ExceptionHandler(MethodArgumentNotValidException.class)

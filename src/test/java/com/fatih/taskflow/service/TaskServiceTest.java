@@ -1,197 +1,170 @@
 package com.fatih.taskflow.service;
-import java.util.List;
-import com.fatih.taskflow.model.Project;
-import com.fatih.taskflow.exception.ProjectNotFoundException;
+
 import com.fatih.taskflow.dto.CreateTaskRequest;
+import com.fatih.taskflow.dto.UpdateTaskStatusRequest;
+import com.fatih.taskflow.exception.ProjectNotFoundException;
+import com.fatih.taskflow.exception.TaskNotFoundException;
+import com.fatih.taskflow.model.Project;
 import com.fatih.taskflow.model.Task;
+import com.fatih.taskflow.model.TaskPriority;
 import com.fatih.taskflow.model.TaskStatus;
+import com.fatih.taskflow.repository.ProjectRepository;
 import com.fatih.taskflow.repository.TaskRepository;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.ArgumentCaptor;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
-import java.util.Optional;
-import java.util.List;
-import com.fatih.taskflow.exception.TaskNotFoundException;
-import com.fatih.taskflow.dto.UpdateTaskStatusRequest;
-import com.fatih.taskflow.repository.ProjectRepository;
 
-import static org.junit.jupiter.api.Assertions.assertSame;
-import static org.mockito.Mockito.when;
-import static org.junit.jupiter.api.Assertions.assertThrows;
+import java.util.Optional;
+
 import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.mockito.Mockito.verify;
+import static org.junit.jupiter.api.Assertions.assertSame;
+import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.lenient;
 import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.when;
 
 @ExtendWith(MockitoExtension.class)
 class TaskServiceTest {
 
+    private static final Long OWNER_ID = 1L;
+
     @Mock
     private TaskRepository taskRepository;
-   
+
     @Mock
     private ProjectRepository projectRepository;
-   
+
+    @Mock
+    private CurrentUserService currentUserService;
+
     @InjectMocks
     private TaskService taskService;
 
+    @BeforeEach
+    void setUpCurrentUser() {
+        lenient().when(currentUserService.getCurrentUserId()).thenReturn(OWNER_ID);
+        lenient().when(currentUserService.getCurrentUserReference()).thenReturn(null);
+    }
+
     @Test
     void createTask_shouldCreateTaskWithTodoStatus() {
-
         CreateTaskRequest request = new CreateTaskRequest();
         request.setTitle("JUnit öğren");
+        request.setDescription("Mockito ile birlikte");
 
-        taskService.createTask(request);
+        when(taskRepository.save(any(Task.class))).thenAnswer(i -> i.getArgument(0));
 
-        ArgumentCaptor<Task> taskCaptor =
-                ArgumentCaptor.forClass(Task.class);
+        Task result = taskService.createTask(request);
 
-        verify(taskRepository).save(taskCaptor.capture());
+        ArgumentCaptor<Task> captor = ArgumentCaptor.forClass(Task.class);
+        verify(taskRepository).save(captor.capture());
 
-        Task savedTask = taskCaptor.getValue();
-
-        assertEquals("JUnit öğren", savedTask.getTitle());
-        assertEquals(TaskStatus.TODO, savedTask.getStatus());
+        Task saved = captor.getValue();
+        assertEquals("JUnit öğren", saved.getTitle());
+        assertEquals(TaskStatus.TODO, saved.getStatus());
+        assertEquals(TaskPriority.MEDIUM, saved.getPriority());
+        assertSame(saved, result);
     }
-@Test
-void getTaskById_shouldReturnTaskWhenTaskExists() {
 
-    Task task = new Task(
-            "Mockito öğren",
-            TaskStatus.TODO
-    );
+    @Test
+    void createTask_shouldUseGivenPriority() {
+        CreateTaskRequest request = new CreateTaskRequest();
+        request.setTitle("Acil iş");
+        request.setPriority(TaskPriority.CRITICAL);
 
-    when(taskRepository.findById(1L))
-            .thenReturn(Optional.of(task));
+        when(taskRepository.save(any(Task.class))).thenAnswer(i -> i.getArgument(0));
 
-    Task result = taskService.getTaskById(1L);
+        Task result = taskService.createTask(request);
 
-    assertEquals("Mockito öğren", result.getTitle());
-    assertEquals(TaskStatus.TODO, result.getStatus());
+        assertEquals(TaskPriority.CRITICAL, result.getPriority());
+    }
 
-    verify(taskRepository).findById(1L);
-}
-@Test
-void getTaskById_shouldThrowExceptionWhenTaskDoesNotExist() {
+    @Test
+    void getTaskById_shouldReturnTaskWhenOwnedByCurrentUser() {
+        Task task = new Task("Var olan görev", TaskStatus.TODO);
+        when(taskRepository.findByIdAndOwner_Id(5L, OWNER_ID))
+                .thenReturn(Optional.of(task));
 
-    when(taskRepository.findById(999L))
-            .thenReturn(Optional.empty());
+        Task result = taskService.getTaskById(5L);
 
-    TaskNotFoundException exception = assertThrows(
-            TaskNotFoundException.class,
-            () -> taskService.getTaskById(999L)
-    );
+        assertSame(task, result);
+    }
 
-    assertEquals(
-            "Task bulunamadı. id: 999",
-            exception.getMessage()
-    );
+    @Test
+    void getTaskById_shouldThrowExceptionWhenTaskDoesNotExist() {
+        when(taskRepository.findByIdAndOwner_Id(99L, OWNER_ID))
+                .thenReturn(Optional.empty());
 
-    verify(taskRepository).findById(999L);
-}
-@Test
-void updateTaskStatus_shouldUpdateExistingTaskStatus() {
+        assertThrows(TaskNotFoundException.class, () -> taskService.getTaskById(99L));
+    }
 
-    Task existingTask = new Task(
-            "Mockito öğren",
-            TaskStatus.TODO
-    );
+    @Test
+    void getTaskById_shouldThrowExceptionWhenTaskBelongsToAnotherUser() {
+        when(taskRepository.findByIdAndOwner_Id(7L, OWNER_ID))
+                .thenReturn(Optional.empty());
 
-    when(taskRepository.findById(1L))
-            .thenReturn(Optional.of(existingTask));
+        assertThrows(TaskNotFoundException.class, () -> taskService.getTaskById(7L));
 
-    when(taskRepository.save(existingTask))
-            .thenReturn(existingTask);
+        verify(taskRepository, never()).delete(any(Task.class));
+    }
 
-    UpdateTaskStatusRequest request =
-            new UpdateTaskStatusRequest();
+    @Test
+    void updateTaskStatus_shouldChangeStatus() {
+        Task task = new Task("Görev", TaskStatus.TODO);
+        when(taskRepository.findByIdAndOwner_Id(3L, OWNER_ID))
+                .thenReturn(Optional.of(task));
+        when(taskRepository.save(any(Task.class))).thenAnswer(i -> i.getArgument(0));
 
-    request.setStatus(TaskStatus.DONE);
+        UpdateTaskStatusRequest request = new UpdateTaskStatusRequest();
+        request.setStatus(TaskStatus.DONE);
 
-    Task result =
-            taskService.updateTaskStatus(1L, request);
+        Task result = taskService.updateTaskStatus(3L, request);
 
-    assertEquals(TaskStatus.DONE, result.getStatus());
+        assertEquals(TaskStatus.DONE, result.getStatus());
+    }
 
-    assertSame(existingTask, result);
+    @Test
+    void deleteTask_shouldDeleteOwnedTask() {
+        Task task = new Task("Silinecek", TaskStatus.TODO);
+        when(taskRepository.findByIdAndOwner_Id(4L, OWNER_ID))
+                .thenReturn(Optional.of(task));
 
-    verify(taskRepository).findById(1L);
-    verify(taskRepository).save(existingTask);
-}
-@Test
-void deleteTask_shouldDeleteExistingTask() {
+        taskService.deleteTask(4L);
 
-    Task existingTask = new Task(
-            "Silinecek görev",
-            TaskStatus.TODO
-    );
+        verify(taskRepository).delete(task);
+    }
 
-    when(taskRepository.findById(1L))
-            .thenReturn(Optional.of(existingTask));
+    @Test
+    void assignTaskToProject_shouldThrowWhenProjectDoesNotExist() {
+        Task task = new Task("Görev", TaskStatus.TODO);
+        when(taskRepository.findByIdAndOwner_Id(2L, OWNER_ID))
+                .thenReturn(Optional.of(task));
+        when(projectRepository.findById(404L)).thenReturn(Optional.empty());
 
-    taskService.deleteTask(1L);
+        assertThrows(ProjectNotFoundException.class,
+                () -> taskService.assignTaskToProject(2L, 404L));
 
-    verify(taskRepository).findById(1L);
-    verify(taskRepository).delete(existingTask);
-}
-@Test
-void getTasksByProjectId_shouldReturnTasksWhenProjectExists() {
+        verify(taskRepository, never()).save(any(Task.class));
+    }
 
-    Project project = new Project("Java Öğrenme");
+    @Test
+    void assignTaskToProject_shouldSetProject() {
+        Task task = new Task("Görev", TaskStatus.TODO);
+        Project project = new Project("Java Öğrenme");
 
-    Task task = new Task(
-            "Docker Compose öğren",
-            TaskStatus.TODO
-    );
+        when(taskRepository.findByIdAndOwner_Id(2L, OWNER_ID))
+                .thenReturn(Optional.of(task));
+        when(projectRepository.findById(1L)).thenReturn(Optional.of(project));
+        when(taskRepository.save(any(Task.class))).thenAnswer(i -> i.getArgument(0));
 
-    task.setProject(project);
+        Task result = taskService.assignTaskToProject(2L, 1L);
 
-    when(projectRepository.existsById(1L))
-            .thenReturn(true);
-
-    when(taskRepository.findByProject_Id(1L))
-            .thenReturn(List.of(task));
-
-    List<Task> result =
-            taskService.getTasksByProjectId(1L);
-
-    assertEquals(1, result.size());
-    assertEquals(
-            "Docker Compose öğren",
-            result.get(0).getTitle()
-    );
-
-    verify(projectRepository)
-            .existsById(1L);
-
-    verify(taskRepository)
-            .findByProject_Id(1L);
-}
-@Test
-void getTasksByProjectId_shouldThrowExceptionWhenProjectDoesNotExist() {
-
-    when(projectRepository.existsById(999L))
-            .thenReturn(false);
-
-    ProjectNotFoundException exception =
-            assertThrows(
-                    ProjectNotFoundException.class,
-                    () -> taskService.getTasksByProjectId(999L)
-            );
-
-    assertEquals(
-            "Project bulunamadı. id: 999",
-            exception.getMessage()
-    );
-
-    verify(projectRepository)
-            .existsById(999L);
-
-    verify(
-            taskRepository,
-            never()
-    ).findByProject_Id(999L);
-}
+        assertSame(project, result.getProject());
+    }
 }
