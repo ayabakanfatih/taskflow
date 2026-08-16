@@ -1,0 +1,59 @@
+services:
+
+  db:
+    image: postgres:18
+    container_name: taskflow-db
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB:-taskflow}
+      POSTGRES_USER: ${POSTGRES_USER:-taskflow}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-taskflow123}
+    volumes:
+      - taskflow-db-data:/var/lib/postgresql
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-taskflow}"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+    networks:
+      - taskflow-net
+
+  backend:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: taskflow-backend
+    depends_on:
+      db:
+        condition: service_healthy
+    environment:
+      SPRING_DATASOURCE_URL: jdbc:postgresql://db:5432/${POSTGRES_DB:-taskflow}
+      SPRING_DATASOURCE_USERNAME: ${POSTGRES_USER:-taskflow}
+      SPRING_DATASOURCE_PASSWORD: ${POSTGRES_PASSWORD:-taskflow123}
+      SPRING_JPA_HIBERNATE_DDL_AUTO: update
+      TASKFLOW_JWT_SECRET: ${TASKFLOW_JWT_SECRET}
+      TASKFLOW_CORS_ORIGINS: ${TASKFLOW_CORS_ORIGINS:-http://localhost:*,http://127.0.0.1:*,http://192.168.*:*}
+    ports:
+      - "8080:8080"
+    networks:
+      - taskflow-net
+
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+      args:
+        VITE_API_URL: ${VITE_API_URL:-http://localhost:8080}
+    container_name: taskflow-frontend
+    depends_on:
+      - backend
+    ports:
+      - "3000:80"
+    networks:
+      - taskflow-net
+
+volumes:
+  taskflow-db-data:
+
+networks:
+  taskflow-net:
+    driver: bridge

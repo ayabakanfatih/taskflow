@@ -1,0 +1,7 @@
+target
+frontend
+.git
+.env.local
+*.log
+.idea
+.vscode

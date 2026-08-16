@@ -16,6 +16,7 @@ export default function Tasks() {
   const [description, setDescription] = useState("");
   const [priority, setPriority] = useState("MEDIUM");
   const [projectId, setProjectId] = useState("");
+  const [newProjectName, setNewProjectName] = useState("");
 
   const navigate = useNavigate();
 
@@ -68,6 +69,18 @@ export default function Tasks() {
     }
   }
 
+  async function handleCreateProject(event) {
+    event.preventDefault();
+    setError("");
+    try {
+      await api.createProject(newProjectName);
+      setNewProjectName("");
+      loadProjects();
+    } catch (err) {
+      setError(err.message);
+    }
+  }
+
   async function handleStatusChange(id, status) {
     try {
       await api.updateTaskStatus(id, status);
@@ -99,6 +112,20 @@ export default function Tasks() {
           Çıkış
         </button>
       </header>
+
+      <section className="card">
+        <h2>Yeni Proje</h2>
+        <form className="task-form" onSubmit={handleCreateProject}>
+          <input
+            type="text"
+            placeholder="Proje adı"
+            value={newProjectName}
+            onChange={(e) => setNewProjectName(e.target.value)}
+            required
+          />
+          <button type="submit">Proje Ekle</button>
+        </form>
+      </section>
 
       <section className="card">
         <h2>Yeni Görev</h2>
